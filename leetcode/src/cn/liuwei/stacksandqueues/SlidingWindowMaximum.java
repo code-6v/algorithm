@@ -100,6 +100,8 @@ public class SlidingWindowMaximum {
         public Integer data;
         public Node next;
 
+        public Node prev;
+
         public Node(Integer data) {
             this.data = data;
         }
@@ -108,7 +110,10 @@ public class SlidingWindowMaximum {
     /**
      * 思路2
      *
-     * 测试结果:超时
+     * 测试结果:成功
+     *
+     * 分析:1.维护从大到小的单调队列,添加元素时,有个特点:新来的比你还大,那你是不是可以out了
+     *     2.根据队列特点添加元素时要从后往前比较
      * 
      * @param nums
      * @param k
@@ -116,26 +121,41 @@ public class SlidingWindowMaximum {
      */
     public static int[] slidingWindowMaximum(int[] nums, int k) {
         int[] maxArray = new int[nums.length - k + 1];
-        Node head = new Node(null);
+        Node head = null;
+        Node tail = null;
         for (int i = 0; i < nums.length; i++) {
             // 删除离开窗口的元素
             if (i >= k){
-                if (head.next.data == nums[i - k]) {
-                    head.next = head.next.next;
+                if (head.data == nums[i - k]) {
+                    if (head.next != null) {
+                        head.next.prev = null;
+                        head = head.next;
+                    }else {
+                        head = null;
+                        tail = null;
+                    }
                 }
             }
 
             // 记录遍历值
-            Node current = head;
-            while (current.next != null && nums[i] <= current.next.data){
-                current = current.next;
+            // 注意:需要从后往前遍历,避免window出现如10,9,8...,5添加4时需要从头遍历到尾的情况
+            // 分析如果经常出现遍历数大于window里所有数的情况,那么window会被经常清空,所以出现这种情况性能也不会差
+            Node current = tail;
+            while (current != null && nums[i] > current.data){
+                current = current.prev;
             }
-            current.next = new Node(nums[i]);
+            tail = new Node(nums[i]);
+            if (current != null) {
+                tail.prev = current;
+                current.next = tail;
+            }else {
+                head = tail;
+            }
 
 
             // 记录窗口内最大值
             if (i >= k-1){
-                maxArray[i - k + 1] = head.next.data;
+                maxArray[i - k + 1] = head.data;
             }
         }
         return maxArray;
@@ -157,5 +177,11 @@ public class SlidingWindowMaximum {
         Assertions.assertArrayEquals(new int[]{1},maximum);
     }
 
-
+    @Test
+    public void test3(){
+        //nums = [1,-1] k = 1
+        //[1,-1]
+        int[] maximum = slidingWindowMaximum(new int[]{1,-1}, 1);
+        Assertions.assertArrayEquals(new int[]{1,-1},maximum);
+    }
 }
